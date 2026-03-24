@@ -1,9 +1,11 @@
 # Config mit echten IPs/Zugangsdaten — nie committen!
 data/config.json
 
-# Laufzeit-Daten
-data/uploads/
-data/gcodes/
+# Laufzeit-Daten (Verzeichnisse behalten, Inhalte ignorieren)
+data/uploads/*
+data/gcodes/*
+!data/uploads/.gitkeep
+!data/gcodes/.gitkeep
 
 # Python
 __pycache__/
