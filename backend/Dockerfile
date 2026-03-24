@@ -8,6 +8,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     libglu1-mesa \
     libgbm1 \
+    libegl1 \
+    libegl-mesa0 \
+    libdbus-1-3 \
+    libfontconfig1 \
+    libx11-6 \
+    libx11-xcb1 \
+    libxcb1 \
+    libxext6 \
     wget \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
@@ -20,7 +28,7 @@ RUN wget -q "https://github.com/SoftFever/OrcaSlicer/releases/download/v${ORCA_V
     && chmod +x /tmp/orca.AppImage \
     && cd /tmp && /tmp/orca.AppImage --appimage-extract \
     && mv /tmp/squashfs-root /opt/orca-slicer \
-    && ln -s /opt/orca-slicer/AppRun /usr/local/bin/orca-slicer \
+    && ln -s /opt/orca-slicer/bin/orca-slicer /usr/local/bin/orca-slicer \
     && rm /tmp/orca.AppImage
 
 ENV ORCA_SLICER_BIN=/usr/local/bin/orca-slicer
