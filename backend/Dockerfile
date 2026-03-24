@@ -3,27 +3,12 @@ FROM python:3.12-slim
 WORKDIR /app
 
 # System-Abhängigkeiten für OrcaSlicer AppImage + FUSE-less Ausführung
+# Nur die Libs die das AppImage NICHT selbst mitbringt:
+# libegl1 + libegl-mesa0: EGL-Treiber (nicht im AppImage gebündelt)
+# xvfb + xauth: virtuelles Display für GUI-App im headless-Betrieb
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libglib2.0-0 \
-    libgl1 \
-    libglu1-mesa \
-    libgbm1 \
     libegl1 \
     libegl-mesa0 \
-    libdbus-1-3 \
-    libfontconfig1 \
-    libx11-6 \
-    libx11-xcb1 \
-    libxcb1 \
-    libxext6 \
-    libgtk-3-0 \
-    libgdk-pixbuf-2.0-0 \
-    libatk1.0-0 \
-    libcairo2 \
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libwayland-client0 \
-    libwayland-egl1 \
     xvfb \
     xauth \
     wget \
@@ -38,7 +23,7 @@ RUN wget -q "https://github.com/SoftFever/OrcaSlicer/releases/download/v${ORCA_V
     && chmod +x /tmp/orca.AppImage \
     && cd /tmp && /tmp/orca.AppImage --appimage-extract \
     && mv /tmp/squashfs-root /opt/orca-slicer \
-    && ln -s /opt/orca-slicer/bin/orca-slicer /usr/local/bin/orca-slicer \
+    && ln -s /opt/orca-slicer/AppRun /usr/local/bin/orca-slicer \
     && rm /tmp/orca.AppImage
 
 ENV ORCA_SLICER_BIN=/usr/local/bin/orca-slicer
