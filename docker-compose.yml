@@ -3,10 +3,12 @@ services:
     build: ./backend
     network_mode: host        # Drucker-Verbindungen kommen von der NAS-IP
     volumes:
-      - ./data/uploads:/app/uploads
-      - ./data/gcodes:/app/gcodes
-      - ./data/profiles:/app/profiles
-      - ./data/config.json:/app/config.json
+      - ./data:/app/data      # Ganzes data/-Verzeichnis — config.json wird automatisch angelegt
+    environment:
+      - CONFIG_FILE=/app/data/config.json
+      - UPLOADS_DIR=/app/data/uploads
+      - GCODES_DIR=/app/data/gcodes
+      - PROFILES_DIR=/app/data/profiles
     restart: unless-stopped
 
   frontend:

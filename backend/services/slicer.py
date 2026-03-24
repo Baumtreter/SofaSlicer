@@ -14,10 +14,9 @@ import tempfile
 from pathlib import Path
 
 from models.job import Job, SliceParams
+from config import PROFILES_DIR, GCODES_DIR
 
 ORCA_BIN = os.getenv("ORCA_SLICER_BIN", "orca-slicer")
-PROFILES_DIR = Path(os.getenv("PROFILES_DIR", "profiles"))
-GCODES_DIR   = Path(os.getenv("GCODES_DIR",   "gcodes"))
 
 
 def _build_args(source: Path, output: Path, params: SliceParams) -> list[str]:

@@ -9,8 +9,9 @@ from fastapi import APIRouter, HTTPException, UploadFile, File
 from pydantic import BaseModel
 import aiofiles
 
+from config import UPLOADS_DIR
+
 router = APIRouter()
-UPLOADS_DIR = Path("uploads")
 ALLOWED_EXT = {".stl", ".3mf", ".obj"}
 
 

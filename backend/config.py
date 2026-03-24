@@ -3,26 +3,34 @@ import os
 from pathlib import Path
 from models.printer import Printer, PrinterProtocol
 
-CONFIG_PATH = Path(os.getenv("CONFIG_FILE", "config.json"))
+CONFIG_PATH  = Path(os.getenv("CONFIG_FILE",  "data/config.json"))
+UPLOADS_DIR  = Path(os.getenv("UPLOADS_DIR",  "data/uploads"))
+GCODES_DIR   = Path(os.getenv("GCODES_DIR",   "data/gcodes"))
+PROFILES_DIR = Path(os.getenv("PROFILES_DIR", "data/profiles"))
 
 _defaults: dict = {
     "printers": [],
     "orca_slicer_bin": os.getenv("ORCA_SLICER_BIN", "orca-slicer"),
-    "profiles_dir": "profiles",
-    "uploads_dir": "uploads",
-    "gcodes_dir": "gcodes",
 }
 
 
+def _ensure_dirs() -> None:
+    for d in [CONFIG_PATH.parent, UPLOADS_DIR, GCODES_DIR, PROFILES_DIR]:
+        d.mkdir(parents=True, exist_ok=True)
+
+
 def _load() -> dict:
+    _ensure_dirs()
     if CONFIG_PATH.exists():
         with open(CONFIG_PATH) as f:
-            data = json.load(f)
-        return {**_defaults, **data}
+            return {**_defaults, **json.load(f)}
+    # Erster Start: leere Config automatisch anlegen
+    _save(_defaults)
     return dict(_defaults)
 
 
 def _save(data: dict) -> None:
+    _ensure_dirs()
     with open(CONFIG_PATH, "w") as f:
         json.dump(data, f, indent=2)
 

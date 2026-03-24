@@ -7,10 +7,10 @@ from routers import printers, slice, files
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Verzeichnisse sicherstellen
-    import os
-    for d in ["uploads", "gcodes", "profiles"]:
-        os.makedirs(d, exist_ok=True)
+    # Startup: Verzeichnisse + config.json automatisch anlegen
+    import config
+    config._ensure_dirs()
+    config._load()
     yield
 
 
