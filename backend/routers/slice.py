@@ -45,8 +45,8 @@ async def _run_slice(job: Job) -> None:
 
 @router.post("/", response_model=Job, status_code=202)
 async def create_slice_job(req: SliceRequest, background_tasks: BackgroundTasks):
-    uploads_dir = Path("uploads")
-    source = uploads_dir / req.filename
+    from config import UPLOADS_DIR
+    source = UPLOADS_DIR / req.filename
     if not source.exists():
         raise HTTPException(400, f"Datei nicht gefunden: {req.filename}")
 
