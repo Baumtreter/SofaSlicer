@@ -58,10 +58,10 @@ systemctl restart moonraker
 
 ## Deployment via Portainer (Synology)
 
-1. Dateien auf das NAS kopieren — z.B. nach `/volume1/docker/sofaslicer/`
+1. Dateien auf das NAS kopieren — z.B. nach `/volume2/docker/sofaslicer/`
    ```bash
    # Von deinem Mac aus:
-   scp -r /Users/flo/Documents/codestuff/sofaslicer user@NAS_IP:/volume1/docker/
+   scp -r /Users/flo/Documents/codestuff/sofaslicer user@NAS_IP:/volume2/docker/
    ```
 
 2. In Portainer öffnen: `http://NAS_IP:9000`
@@ -85,7 +85,7 @@ systemctl restart moonraker
 
 ```bash
 ssh user@NAS_IP
-cd /volume1/docker/sofaslicer
+cd /volume2/docker/sofaslicer
 docker compose up -d
 ```
 
