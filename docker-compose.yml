@@ -3,7 +3,7 @@ services:
     build: ./backend
     network_mode: host        # Drucker-Verbindungen kommen von der NAS-IP
     volumes:
-      - ./data:/app/data      # Ganzes data/-Verzeichnis — config.json wird automatisch angelegt
+      - sofaslicer_data:/app/data
     environment:
       - CONFIG_FILE=/app/data/config.json
       - UPLOADS_DIR=/app/data/uploads
@@ -20,3 +20,6 @@ services:
       - "host.nas:host-gateway"
     depends_on:
       - backend
+
+volumes:
+  sofaslicer_data:    # Docker verwaltet dieses Volume automatisch
