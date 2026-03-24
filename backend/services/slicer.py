@@ -17,10 +17,13 @@ from models.job import Job, SliceParams
 from config import PROFILES_DIR, GCODES_DIR
 
 ORCA_BIN = os.getenv("ORCA_SLICER_BIN", "orca-slicer")
+# xvfb-run stellt ein virtuelles Display bereit – OrcaSlicer ist eine GUI-App
+# und braucht einen Display-Kontext auch im CLI-Modus
+XVFB = "xvfb-run"
 
 
 def _build_args(source: Path, output: Path, params: SliceParams) -> list[str]:
-    args = [ORCA_BIN]
+    args = [XVFB, "-a", ORCA_BIN]
 
     # Profil-Dateien laden falls vorhanden
     printer_ini  = PROFILES_DIR / f"{params.printer_profile}.ini"
