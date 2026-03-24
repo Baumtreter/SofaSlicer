@@ -1,0 +1,7 @@
+{
+  "printers": [],
+  "orca_slicer_bin": "/usr/local/bin/orca-slicer",
+  "profiles_dir": "profiles",
+  "uploads_dir": "uploads",
+  "gcodes_dir": "gcodes"
+}

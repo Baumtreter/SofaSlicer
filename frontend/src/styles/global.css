@@ -1,0 +1,155 @@
+:root {
+  --bg-0: #0B0D0F;
+  --bg-1: #111418;
+  --bg-2: #181C21;
+  --bg-3: #1E2329;
+  --border: #252B33;
+  --border-bright: #313A45;
+  --accent: #F5620F;
+  --accent-dim: #7A3108;
+  --accent-glow: rgba(245, 98, 15, 0.15);
+  --teal: #2BD9AA;
+  --teal-dim: #0D5E49;
+  --text-1: #E8E2D9;
+  --text-2: #8A9099;
+  --text-3: #4A5260;
+  --red: #E84040;
+  --yellow: #F5C842;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'Syne', sans-serif;
+  --radius: 4px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%;
+  background: var(--bg-0);
+  color: var(--text-1);
+  font-family: var(--sans);
+  overflow: hidden;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 2px; }
+
+/* Utility */
+.mono { font-family: var(--mono); }
+.label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+/* Inputs */
+input, select, textarea {
+  font-family: var(--mono);
+  font-size: 11px;
+  background: var(--bg-0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-1);
+  outline: none;
+  padding: 6px 10px;
+  transition: border-color .15s;
+  width: 100%;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+input::placeholder, textarea::placeholder { color: var(--text-3); }
+select { cursor: pointer; }
+select option { background: var(--bg-2); }
+
+/* Buttons */
+.btn {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  padding: 8px 16px;
+  transition: all .2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn:disabled { opacity: .35; pointer-events: none; }
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover { background: #ff7a2b; box-shadow: 0 0 16px rgba(245,98,15,.3); }
+
+.btn-secondary {
+  background: transparent;
+  color: var(--teal);
+  border: 1px solid var(--teal-dim);
+}
+.btn-secondary:hover { background: rgba(43,217,170,.08); border-color: var(--teal); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-2);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { border-color: var(--border-bright); color: var(--text-1); }
+
+.btn-danger {
+  background: transparent;
+  color: var(--red);
+  border: 1px solid rgba(232,64,64,.3);
+}
+.btn-danger:hover { background: rgba(232,64,64,.08); border-color: var(--red); }
+
+/* Status dot */
+.dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot-online  { background: var(--teal);   box-shadow: 0 0 6px var(--teal);   animation: blink 2s ease-in-out infinite; }
+.dot-printing{ background: var(--accent); box-shadow: 0 0 6px var(--accent); animation: blink 1s ease-in-out infinite; }
+.dot-idle    { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+.dot-offline { background: var(--text-3); }
+.dot-error   { background: var(--red);    box-shadow: 0 0 6px var(--red); }
+
+@keyframes blink {
+  0%,100% { opacity: 1; }
+  50%      { opacity: .4; }
+}
+
+/* Toggle */
+.toggle-wrap { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.toggle {
+  width: 32px; height: 18px;
+  background: var(--bg-0);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  position: relative;
+  flex-shrink: 0;
+  transition: all .2s;
+}
+.toggle.on { background: var(--accent-dim); border-color: var(--accent); }
+.toggle::after {
+  content: '';
+  position: absolute;
+  width: 12px; height: 12px;
+  background: var(--text-3);
+  border-radius: 50%;
+  top: 2px; left: 2px;
+  transition: all .2s;
+}
+.toggle.on::after { left: 16px; background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+
+/* Card / Panel section */
+.panel-section {
+  border-bottom: 1px solid var(--border);
+  padding: 12px 14px;
+}

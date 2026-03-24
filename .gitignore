@@ -1,0 +1,23 @@
+# Config mit echten IPs/Zugangsdaten — nie committen!
+data/config.json
+
+# Laufzeit-Daten
+data/uploads/
+data/gcodes/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/

@@ -1,0 +1,37 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
+
+from routers import printers, slice, files
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Verzeichnisse sicherstellen
+    import os
+    for d in ["uploads", "gcodes", "profiles"]:
+        os.makedirs(d, exist_ok=True)
+    yield
+
+
+app = FastAPI(
+    title="SofaSlicer API",
+    version="0.1.0",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(printers.router, prefix="/printers", tags=["Printers"])
+app.include_router(slice.router,    prefix="/slice",    tags=["Slice"])
+app.include_router(files.router,    prefix="/files",    tags=["Files"])
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}

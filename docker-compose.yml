@@ -1,0 +1,20 @@
+services:
+  backend:
+    build: ./backend
+    network_mode: host        # Drucker-Verbindungen kommen von der NAS-IP
+    volumes:
+      - ./data/uploads:/app/uploads
+      - ./data/gcodes:/app/gcodes
+      - ./data/profiles:/app/profiles
+      - ./data/config.json:/app/config.json
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+    extra_hosts:
+      - "host.nas:host-gateway"
+    depends_on:
+      - backend
