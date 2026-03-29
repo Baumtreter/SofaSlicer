@@ -9,6 +9,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libegl1 \
     libegl-mesa0 \
+    libgtk-3-0 \
     xvfb \
     xauth \
     wget \
