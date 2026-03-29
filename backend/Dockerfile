@@ -2,16 +2,22 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# System-Abhängigkeiten für OrcaSlicer AppImage + FUSE-less Ausführung
-# Nur die Libs die das AppImage NICHT selbst mitbringt:
-# libegl1 + libegl-mesa0: EGL-Treiber (nicht im AppImage gebündelt)
-# xvfb + xauth: virtuelles Display für GUI-App im headless-Betrieb
+# System-Abhängigkeiten für OrcaSlicer AppImage (headless, ohne FUSE)
+# Das AppImage bündelt viele Libs selbst, aber folgendes fehlt im schlanken Container:
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Grafik-Grundbausteine (OrcaSlicer initialisiert GTK auch im CLI-Modus)
+    libgtk-3-0 \
     libegl1 \
     libegl-mesa0 \
-    libgtk-3-0 \
+    libgl1 \
+    libglu1-mesa \
+    # Virtuelles Display (OrcaSlicer ist eine GUI-App, braucht einen "Bildschirm")
     xvfb \
     xauth \
+    # Netzwerk + Systemdienste
+    libcurl4 \
+    libdbus-1-3 \
+    # Download des AppImage beim Build
     wget \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
@@ -27,8 +33,6 @@ RUN wget -q "https://github.com/SoftFever/OrcaSlicer/releases/download/v${ORCA_V
     && ln -s /opt/orca-slicer/AppRun /usr/local/bin/orca-slicer \
     && rm /tmp/orca.AppImage
 
-# DIAGNOSE: Alle fehlenden Libs auf einmal anzeigen (danach entfernen)
-RUN echo "=== FEHLENDE LIBS ===" && ldd /opt/orca-slicer/bin/orca-slicer 2>&1 | grep "not found" || true
 
 ENV ORCA_SLICER_BIN=/usr/local/bin/orca-slicer
 
