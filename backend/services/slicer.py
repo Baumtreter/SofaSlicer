@@ -31,6 +31,7 @@ def _build_overrides_json(params: SliceParams) -> str:
         "from": "user",
         "name": "overrides",
         "version": "2.2.0.0",
+        "compatible_printers_condition": "",
         "layer_height": str(params.layer_height),
         "sparse_infill_density": f"{params.infill_percent}%",
         "sparse_infill_pattern": params.infill_pattern,
