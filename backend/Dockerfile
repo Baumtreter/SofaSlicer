@@ -27,6 +27,9 @@ RUN wget -q "https://github.com/SoftFever/OrcaSlicer/releases/download/v${ORCA_V
     && ln -s /opt/orca-slicer/AppRun /usr/local/bin/orca-slicer \
     && rm /tmp/orca.AppImage
 
+# DIAGNOSE: Alle fehlenden Libs auf einmal anzeigen (danach entfernen)
+RUN echo "=== FEHLENDE LIBS ===" && ldd /opt/orca-slicer/bin/orca-slicer 2>&1 | grep "not found" || true
+
 ENV ORCA_SLICER_BIN=/usr/local/bin/orca-slicer
 
 # Python-Dependencies
