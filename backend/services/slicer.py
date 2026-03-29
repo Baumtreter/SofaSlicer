@@ -52,7 +52,7 @@ def _build_overrides_json(params: SliceParams) -> str:
     return tmp.name
 
 
-def _build_args(source: Path, output: Path, params: SliceParams) -> tuple[list[str], str]:
+def _build_args(source: Path, out_dir: Path, params: SliceParams) -> tuple[list[str], str]:
     """Gibt (args, tmp_json_path) zurück. tmp_json_path muss nach dem Prozess gelöscht werden."""
     args = [XVFB, "-a", ORCA_BIN]
 
@@ -71,7 +71,7 @@ def _build_args(source: Path, output: Path, params: SliceParams) -> tuple[list[s
     tmp_path = _build_overrides_json(params)
     args += ["--load-settings", tmp_path]
 
-    args += ["--slice", "1", "-o", str(output), str(source)]
+    args += ["--slice", "0", "--outputdir", str(out_dir), str(source)]
     return args, tmp_path
 
 
@@ -112,26 +112,32 @@ async def slice_model(job: Job) -> dict:
         raise FileNotFoundError(f"Quelldatei nicht gefunden: {source}")
 
     GCODES_DIR.mkdir(parents=True, exist_ok=True)
-    output = GCODES_DIR / f"{job.id}.gcode"
+    final_output = GCODES_DIR / f"{job.id}.gcode"
 
-    args, tmp_json = _build_args(source, output, job.params)
+    # OrcaSlicer benennt die Datei selbst → temporäres Ausgabeverzeichnis
+    with tempfile.TemporaryDirectory(prefix="orca_out_") as out_dir:
+        args, tmp_json = _build_args(source, Path(out_dir), job.params)
 
-    try:
-        proc = await asyncio.create_subprocess_exec(
-            *args,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-        )
-        stdout, _ = await proc.communicate()
-        log = stdout.decode("utf-8", errors="replace")
-    finally:
-        Path(tmp_json).unlink(missing_ok=True)
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *args,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+            )
+            stdout, _ = await proc.communicate()
+            log = stdout.decode("utf-8", errors="replace")
+        finally:
+            Path(tmp_json).unlink(missing_ok=True)
 
-    if proc.returncode != 0:
-        raise RuntimeError(f"OrcaSlicer Fehler (code {proc.returncode}):\n{log}")
+        if proc.returncode != 0:
+            raise RuntimeError(f"OrcaSlicer Fehler (code {proc.returncode}):\n{log}")
 
-    if not output.exists():
-        raise RuntimeError("OrcaSlicer hat keine G-Code-Datei erzeugt.")
+        # Erzeugte .gcode-Datei finden und umbenennen
+        gcode_files = list(Path(out_dir).glob("*.gcode"))
+        if not gcode_files:
+            raise RuntimeError("OrcaSlicer hat keine G-Code-Datei erzeugt.")
+
+        gcode_files[0].rename(final_output)
 
     stats = _parse_stats(log)
-    return {"gcode_path": str(output), **stats}
+    return {"gcode_path": str(final_output), **stats}
