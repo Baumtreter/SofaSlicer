@@ -43,6 +43,12 @@ export const printers = {
   cancel: (id)            => req('POST',   `/printers/${id}/cancel`),
 }
 
+// ── Profiles ──────────────────────────────────────────────────────────────
+export const profiles = {
+  machines:  () => req('GET', '/profiles/machines'),
+  filaments: () => req('GET', '/profiles/filaments'),
+}
+
 // ── Slice ─────────────────────────────────────────────────────────────────
 export const slice = {
   start:  (filename, params)        => req('POST', '/slice/',                    { filename, params }),

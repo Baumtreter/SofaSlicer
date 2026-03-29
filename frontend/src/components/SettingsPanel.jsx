@@ -50,13 +50,26 @@ function Group({ title, children, defaultOpen = true }) {
   )
 }
 
-export default function SettingsPanel({ params, onChange }) {
+export default function SettingsPanel({ params, onChange, machineProfiles = [], filamentProfiles = [] }) {
   const set = (key, val) => onChange({ ...params, [key]: val })
 
   const qualityId = QUALITY.find(q => q.layer === params.layer_height)?.id ?? 'custom'
 
   return (
     <div style={{ overflowY:'auto', flex:1 }}>
+
+      {/* Drucker-Profil */}
+      <Group title="Drucker-Profil">
+        <Row label="Maschine">
+          <select value={params.machine_profile} onChange={e => set('machine_profile', e.target.value)}
+            style={{ width:150, fontSize:10 }}>
+            <option value="">– kein Profil –</option>
+            {machineProfiles.map(p => (
+              <option key={p.path} value={p.path}>{p.vendor} · {p.name}</option>
+            ))}
+          </select>
+        </Row>
+      </Group>
 
       {/* Qualität */}
       <Group title="Druckqualität">
@@ -89,14 +102,13 @@ export default function SettingsPanel({ params, onChange }) {
 
       {/* Filament */}
       <Group title="Filament">
-        <Row label="Material">
+        <Row label="Profil">
           <select value={params.filament_profile} onChange={e => set('filament_profile', e.target.value)}
-            style={{ width:110 }}>
-            <option value="pla">PLA</option>
-            <option value="petg">PETG</option>
-            <option value="abs">ABS</option>
-            <option value="tpu">TPU</option>
-            <option value="asa">ASA</option>
+            style={{ width:150, fontSize:10 }}>
+            <option value="">– kein Profil –</option>
+            {filamentProfiles.map(p => (
+              <option key={p.path} value={p.path}>{p.vendor} · {p.name}</option>
+            ))}
           </select>
         </Row>
         <Row label="Nozzle-Temp">

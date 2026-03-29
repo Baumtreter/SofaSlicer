@@ -2,14 +2,15 @@ import FilePanel from '../components/FilePanel'
 import SettingsPanel from '../components/SettingsPanel'
 import ActionBar from '../components/ActionBar'
 import MobileNav from '../components/MobileNav'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { profiles as profilesApi } from '../api'
 
 const DEFAULT_PARAMS = {
   layer_height: 0.20, infill_percent: 15, infill_pattern: 'gyroid',
   perimeters: 3, support: false, support_type: null,
   brim: false, brim_width_mm: 8,
   nozzle_temp: 215, bed_temp: 60, speed_mm_s: 150,
-  printer_profile: 'default', filament_profile: 'pla',
+  machine_profile: '', filament_profile: '',
 }
 
 // Desktop: 3-Spalten. Tablet/Mobile: Tab-basiert
@@ -28,6 +29,13 @@ export default function SlicerPage({ selectedPrinter }) {
   const [params, setParams]             = useState(DEFAULT_PARAMS)
   const [mobileTab, setMobileTab]       = useState('files')
   const isMobile                        = useIsMobile()
+  const [machineProfiles, setMachineProfiles]     = useState([])
+  const [filamentProfiles, setFilamentProfiles]   = useState([])
+
+  useEffect(() => {
+    profilesApi.machines().then(setMachineProfiles).catch(() => {})
+    profilesApi.filaments().then(setFilamentProfiles).catch(() => {})
+  }, [])
 
   if (isMobile) {
     return (
@@ -38,7 +46,8 @@ export default function SlicerPage({ selectedPrinter }) {
             <FilePanel selectedFile={selectedFile} onSelect={setSelectedFile} />
           )}
           {mobileTab === 'settings' && (
-            <SettingsPanel params={params} onChange={setParams} />
+            <SettingsPanel params={params} onChange={setParams}
+              machineProfiles={machineProfiles} filamentProfiles={filamentProfiles} />
           )}
           {mobileTab === 'viewport' && (
             <ViewportPlaceholder filename={selectedFile} />
@@ -75,7 +84,8 @@ export default function SlicerPage({ selectedPrinter }) {
 
       {/* Rechts: Settings + ActionBar */}
       <div style={{ background:'var(--bg-1)', borderLeft:'1px solid var(--border)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
-        <SettingsPanel params={params} onChange={setParams} />
+        <SettingsPanel params={params} onChange={setParams}
+          machineProfiles={machineProfiles} filamentProfiles={filamentProfiles} />
         <ActionBar selectedFile={selectedFile} params={params} selectedPrinter={selectedPrinter} />
       </div>
     </div>

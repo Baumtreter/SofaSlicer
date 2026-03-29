@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from routers import printers, slice, files
+from routers import printers, slice, files, profiles
 
 
 @asynccontextmanager
@@ -30,6 +30,7 @@ app.add_middleware(
 app.include_router(printers.router, prefix="/printers", tags=["Printers"])
 app.include_router(slice.router,    prefix="/slice",    tags=["Slice"])
 app.include_router(files.router,    prefix="/files",    tags=["Files"])
+app.include_router(profiles.router, prefix="/profiles", tags=["Profiles"])
 
 
 @app.get("/health")

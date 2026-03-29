@@ -18,7 +18,7 @@ import tempfile
 from pathlib import Path
 
 from models.job import Job, SliceParams
-from config import PROFILES_DIR, GCODES_DIR
+from config import GCODES_DIR
 
 ORCA_BIN = os.getenv("ORCA_SLICER_BIN", "orca-slicer")
 XVFB = "xvfb-run"
@@ -60,20 +60,17 @@ def _build_args(source: Path, out_dir: Path, params: SliceParams) -> tuple[list[
     """Gibt (args, tmp_json_path) zurück. tmp_json_path muss nach dem Prozess gelöscht werden."""
     args = [XVFB, "-a", ORCA_BIN]
 
-    # Profil-JSONs laden falls vorhanden (aus Desktop-App exportiert)
-    settings_files = []
-    printer_json  = PROFILES_DIR / f"{params.printer_profile}.json"
-    filament_json = PROFILES_DIR / f"{params.filament_profile}.json"
-    if printer_json.exists():
-        settings_files.append(str(printer_json))
-    if filament_json.exists():
-        settings_files.append(str(filament_json))
-    if settings_files:
-        args += ["--load-settings", ";".join(settings_files)]
-
-    # Inline-Overrides als temporäre JSON
+    # Maschinen-Profil + Overrides gemeinsam via --load-settings (Reihenfolge wichtig)
     tmp_path = _build_overrides_json(params)
-    args += ["--load-settings", tmp_path]
+    settings = []
+    if params.machine_profile:
+        settings.append(params.machine_profile)
+    settings.append(tmp_path)
+    args += ["--load-settings", ";".join(settings)]
+
+    # Filament-Profil separat via --load-filaments
+    if params.filament_profile:
+        args += ["--load-filaments", params.filament_profile]
 
     args += ["--slice", "0", "--outputdir", str(out_dir), str(source)]
     return args, tmp_path

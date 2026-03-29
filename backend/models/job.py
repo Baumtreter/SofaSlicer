@@ -26,8 +26,8 @@ class SliceParams(BaseModel):
     nozzle_temp: int = 215
     bed_temp: int = 60
     speed_mm_s: int = 150
-    printer_profile: str = "default"
-    filament_profile: str = "pla"
+    machine_profile: str = ""   # voller Pfad zur OrcaSlicer-Maschinen-JSON
+    filament_profile: str = ""  # voller Pfad zur OrcaSlicer-Filament-JSON
 
 
 class Job(BaseModel):
