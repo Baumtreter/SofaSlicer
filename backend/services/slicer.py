@@ -27,6 +27,10 @@ XVFB = "xvfb-run"
 def _build_overrides_json(params: SliceParams) -> str:
     """Schreibt Parameter-Overrides in eine temporäre JSON-Datei und gibt den Pfad zurück."""
     overrides = {
+        "type": "process",
+        "from": "user",
+        "name": "overrides",
+        "version": "2.2.0.0",
         "layer_height": str(params.layer_height),
         "sparse_infill_density": f"{params.infill_percent}%",
         "sparse_infill_pattern": params.infill_pattern,
