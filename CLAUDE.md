@@ -60,15 +60,17 @@ docker compose up -d
 
 Option B — Portainer Git Stack: Repo in Git pushen → Portainer "Repository" als Build-Methode wählen → ganzer Kontext verfügbar.
 
+### OrcaSlicer 2.2.0 CLI — wichtige Erkenntnisse
+
+- **Kein `--set`** (PrusaSlicer-Syntax, existiert nicht in OrcaSlicer)
+- **Kein `-o`** für Ausgabedatei → stattdessen `--outputdir <verzeichnis>`
+- **`--slice 0`** = alle Platten (0 = all, i = Platte i)
+- Parameter-Overrides: temporäre JSON-Datei + `--load-settings`
+- OrcaSlicer-Parameternamen: `wall_loops`, `sparse_infill_density`, `sparse_infill_pattern`, `enable_support`, `nozzle_temperature` (Liste!), `outer_wall_speed`
+- Korrekter Aufruf: `xvfb-run -a orca-slicer --load-settings overrides.json --slice 0 --outputdir /tmp/out input.stl`
+- Output-Datei wird automatisch benannt → im outputdir nach `*.gcode` suchen
+- Slice-Fehler tauchen **nicht** in Container-Logs auf → nur in `job.error` via `GET /slice/<job_id>`
+
 ### Nächster Schritt
 
-1. Image via SCP/SSH erfolgreich bauen
-2. Slice testen und **kompletten Fehlertext** aus dem Container-Log holen:
-   ```bash
-   docker logs sofaslicer-backend-1 2>&1 | tail -50
-   ```
-   Oder nach dem Slice-Aufruf:
-   ```bash
-   docker exec sofaslicer-backend-1 xvfb-run orca-slicer --slice ... 2>&1
-   ```
-3. Fehlende Libs gezielt nachinstallieren (oder unnötige entfernen)
+Slice testen. Falls erneut ein Fehler: `GET http://NAS_IP:8000/slice/<job_id>` → Feld `"error"` zeigen.
