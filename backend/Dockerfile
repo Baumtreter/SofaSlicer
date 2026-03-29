@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libegl-mesa0 \
     libgl1 \
     libglu1-mesa \
+    libwebkit2gtk-4.0-37 \
     # Virtuelles Display (OrcaSlicer ist eine GUI-App, braucht einen "Bildschirm")
     xvfb \
     xauth \
