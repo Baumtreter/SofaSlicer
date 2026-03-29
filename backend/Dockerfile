@@ -14,6 +14,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Virtuelles Display (OrcaSlicer ist eine GUI-App, braucht einen "Bildschirm")
     xvfb \
     xauth \
+    # GStreamer (Multimedia-Framework, von OrcaSlicer für Rendering benötigt)
+    libgstreamer1.0-0 \
+    libgstreamer-plugins-base1.0-0 \
     # Netzwerk + Systemdienste
     libcurl4 \
     libdbus-1-3 \
