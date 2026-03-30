@@ -71,9 +71,7 @@ export default function SlicerPage({ selectedPrinter }) {
 
       {/* Rechts: Settings + ActionBar */}
       <div style={{ background:'var(--bg-1)', borderLeft:'1px solid var(--border)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
-        <SettingsPanel params={params} onChange={setParams}
-          machineProfiles={machineProfiles} processProfiles={processProfiles}
-          filamentProfiles={filamentProfiles} />
+        <SettingsPanel params={params} onChange={setParams} />
         <ActionBar selectedFile={selectedFile} params={params} selectedPrinter={selectedPrinter} />
       </div>
     </div>
