@@ -14,26 +14,27 @@ Self-hosted Slicing-Backend: STL-Dateien hochladen → OrcaSlicer CLI sliced sie
 
 ---
 
-## Aktueller Stand (2026-03-30, Session 2)
+## Aktueller Stand (2026-03-30, Session 3)
 
 ### Was komplett funktioniert
 - Docker-Image baut + läuft (python:3.12-slim-bookworm, alle nötigen Libs)
 - OrcaSlicer AppImage headless via xvfb-run + AppRun-Symlink
 - Backend-API: Upload, Slice, G-Code-Download, Drucker-Verwaltung (Netzwerk)
-- **Neues Profil-System komplett implementiert (Session 2):**
+- **Profil-System Backend + Frontend komplett (Session 2+3):**
   - `GET /setup/printers/available` — Vendor-Liste vom OrcaSlicer GitHub-Repo
   - `GET /setup/printers/available/{vendor}` — Machine-JSONs für einen Vendor
   - `POST /setup/printers` — Drucker hinzufügen: Profile werden im Hintergrund heruntergeladen
   - `GET /setup/printers` — Eingerichtete Drucker auflisten
   - `GET /setup/printers/{id}/profiles` — Verfügbare process/filament-Dateien
   - `DELETE /setup/printers/{id}` — Drucker + Profile entfernen
-  - Slice-Router nutzt jetzt Profile aus `/data/printers/` statt dynamisch generierter JSONs
+- **Frontend komplett auf neues System umgestellt (Session 3):**
+  - PrintersPage: Tab "Profil-Drucker" (Vendor → Gerät → Download) + Tab "Netzwerk"
+  - SettingsPanel: 3 Dropdowns (Drucker, Druckprofil, Filament)
+  - SlicerPage/ActionBar: nutzt printer_id + process_file + filament_file
 
-### Was noch fehlt (nächste Session)
-1. **Custom-Profil-Upload** (`POST /setup/printers/custom`) — für K1 Max, U1
-2. **Frontend-Setup-Seite** — UI zum Drucker einrichten (Vendor → Maschine → Download)
-3. **Frontend Slice-Flow** — angepasst an neues SliceParams-Modell (printer_id, process_file, filament_file)
-4. **Testen auf dem NAS** — ob das neue System wirklich funktioniert
+### Was noch fehlt
+1. **Testen auf dem NAS** — Setup-Flow durchspielen (Drucker hinzufügen → slice)
+2. **Custom-Profil-Upload** (`POST /setup/printers/custom`) — für K1 Max, U1
 
 ---
 
@@ -171,14 +172,12 @@ SSH braucht `sudo` für docker-Befehle (User nicht in docker-Gruppe).
 
 ## Nächster Schritt (nächste Session)
 
-**Priorität 1 — Testen:**
-- NAS deployen und Setup-Flow durchspielen (Drucker hinzufügen → Profile herunterladen → Slice)
-- Wenn Slicing funktioniert: Erfolg!
+**Priorität 1 — Testen auf dem NAS:**
+- Portainer: Stack neu deployen (Pull + Redeploy)
+- Unter "Drucker" → "Profil-Drucker" → Drucker einrichten (z.B. BBL → Bambu Lab P1S.json)
+- Warten bis "Bereit" erscheint (Profile werden heruntergeladen)
+- Unter "Slicer": STL hochladen, Drucker/Profil/Filament wählen → Slicen
 
 **Priorität 2 — Custom-Profil-Upload:**
 - `POST /setup/printers/custom` — ZIP oder einzelne JSONs hochladen
 - Für K1 Max und evtl. U1
-
-**Priorität 3 — Frontend:**
-- Setup-Seite: Vendor-Dropdown → Machine-Dropdown → "Hinzufügen" Button → Fortschrittsanzeige
-- Slice-Flow anpassen: Drucker-Dropdown (aus /setup/printers) → Process → Filament → Slice
