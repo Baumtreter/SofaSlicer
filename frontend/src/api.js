@@ -43,11 +43,14 @@ export const printers = {
   cancel: (id)            => req('POST',   `/printers/${id}/cancel`),
 }
 
-// ── Profiles ──────────────────────────────────────────────────────────────
-export const profiles = {
-  machines:  () => req('GET', '/profiles/machines'),
-  processes: () => req('GET', '/profiles/processes'),
-  filaments: () => req('GET', '/profiles/filaments'),
+// ── Setup-Drucker (OrcaSlicer-Profile) ────────────────────────────────────
+export const setup = {
+  vendors:  ()         => req('GET', '/setup/printers/available'),
+  machines: (vendor)   => req('GET', `/setup/printers/available/${encodeURIComponent(vendor)}`),
+  list:     ()         => req('GET', '/setup/printers/'),
+  add:      (data)     => req('POST', '/setup/printers/', data),
+  profiles: (id)       => req('GET', `/setup/printers/${id}/profiles`),
+  delete:   (id)       => req('DELETE', `/setup/printers/${id}`),
 }
 
 // ── Slice ─────────────────────────────────────────────────────────────────

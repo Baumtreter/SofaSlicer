@@ -25,7 +25,7 @@ export default function ActionBar({ selectedFile, params, selectedPrinter }) {
   const [sending, setSending] = useState(false)
   const [error, setError]   = useState(null)
 
-  const canSlice = !!selectedFile && !slicing
+  const canSlice = !!selectedFile && !!params.printer_id && !!params.process_file && !!params.filament_file && !slicing
   const canSend  = job?.status === 'sliced' && !!selectedPrinter && !sending
 
   const handleSlice = async () => {
