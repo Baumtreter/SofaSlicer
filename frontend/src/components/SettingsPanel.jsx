@@ -50,7 +50,7 @@ function Group({ title, children, defaultOpen = true }) {
   )
 }
 
-export default function SettingsPanel({ params, onChange, machineProfiles = [], filamentProfiles = [] }) {
+export default function SettingsPanel({ params, onChange, machineProfiles = [], processProfiles = [], filamentProfiles = [] }) {
   const set = (key, val) => onChange({ ...params, [key]: val })
 
   const qualityId = QUALITY.find(q => q.layer === params.layer_height)?.id ?? 'custom'
@@ -65,6 +65,15 @@ export default function SettingsPanel({ params, onChange, machineProfiles = [], 
             style={{ width:150, fontSize:10 }}>
             <option value="">– kein Profil –</option>
             {machineProfiles.map(p => (
+              <option key={p.path} value={p.path}>{p.vendor} · {p.name}</option>
+            ))}
+          </select>
+        </Row>
+        <Row label="Prozess">
+          <select value={params.process_profile} onChange={e => set('process_profile', e.target.value)}
+            style={{ width:150, fontSize:10 }}>
+            <option value="">– kein Profil –</option>
+            {processProfiles.map(p => (
               <option key={p.path} value={p.path}>{p.vendor} · {p.name}</option>
             ))}
           </select>

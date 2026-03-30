@@ -27,6 +27,7 @@ class SliceParams(BaseModel):
     bed_temp: int = 60
     speed_mm_s: int = 150
     machine_profile: str = ""   # voller Pfad zur OrcaSlicer-Maschinen-JSON
+    process_profile: str = ""   # voller Pfad zur OrcaSlicer-Prozess-JSON
     filament_profile: str = ""  # voller Pfad zur OrcaSlicer-Filament-JSON
 
 

@@ -10,7 +10,7 @@ const DEFAULT_PARAMS = {
   perimeters: 3, support: false, support_type: null,
   brim: false, brim_width_mm: 8,
   nozzle_temp: 215, bed_temp: 60, speed_mm_s: 150,
-  machine_profile: '', filament_profile: '',
+  machine_profile: '', process_profile: '', filament_profile: '',
 }
 
 // Desktop: 3-Spalten. Tablet/Mobile: Tab-basiert
@@ -29,11 +29,13 @@ export default function SlicerPage({ selectedPrinter }) {
   const [params, setParams]             = useState(DEFAULT_PARAMS)
   const [mobileTab, setMobileTab]       = useState('files')
   const isMobile                        = useIsMobile()
-  const [machineProfiles, setMachineProfiles]     = useState([])
-  const [filamentProfiles, setFilamentProfiles]   = useState([])
+  const [machineProfiles, setMachineProfiles]   = useState([])
+  const [processProfiles, setProcessProfiles]   = useState([])
+  const [filamentProfiles, setFilamentProfiles] = useState([])
 
   useEffect(() => {
     profilesApi.machines().then(setMachineProfiles).catch(() => {})
+    profilesApi.processes().then(setProcessProfiles).catch(() => {})
     profilesApi.filaments().then(setFilamentProfiles).catch(() => {})
   }, [])
 
@@ -47,7 +49,8 @@ export default function SlicerPage({ selectedPrinter }) {
           )}
           {mobileTab === 'settings' && (
             <SettingsPanel params={params} onChange={setParams}
-              machineProfiles={machineProfiles} filamentProfiles={filamentProfiles} />
+              machineProfiles={machineProfiles} processProfiles={processProfiles}
+              filamentProfiles={filamentProfiles} />
           )}
           {mobileTab === 'viewport' && (
             <ViewportPlaceholder filename={selectedFile} />
@@ -85,7 +88,8 @@ export default function SlicerPage({ selectedPrinter }) {
       {/* Rechts: Settings + ActionBar */}
       <div style={{ background:'var(--bg-1)', borderLeft:'1px solid var(--border)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
         <SettingsPanel params={params} onChange={setParams}
-          machineProfiles={machineProfiles} filamentProfiles={filamentProfiles} />
+          machineProfiles={machineProfiles} processProfiles={processProfiles}
+          filamentProfiles={filamentProfiles} />
         <ActionBar selectedFile={selectedFile} params={params} selectedPrinter={selectedPrinter} />
       </div>
     </div>

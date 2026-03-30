@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from services.profiles import list_machine_profiles, list_filament_profiles
+from services.profiles import list_machine_profiles, list_process_profiles, list_filament_profiles
 
 router = APIRouter()
 
@@ -7,6 +7,11 @@ router = APIRouter()
 @router.get("/machines")
 def get_machines():
     return list_machine_profiles()
+
+
+@router.get("/processes")
+def get_processes():
+    return list_process_profiles()
 
 
 @router.get("/filaments")

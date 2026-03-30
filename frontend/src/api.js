@@ -46,6 +46,7 @@ export const printers = {
 // ── Profiles ──────────────────────────────────────────────────────────────
 export const profiles = {
   machines:  () => req('GET', '/profiles/machines'),
+  processes: () => req('GET', '/profiles/processes'),
   filaments: () => req('GET', '/profiles/filaments'),
 }
 

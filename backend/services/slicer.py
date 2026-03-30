@@ -1,14 +1,23 @@
 """
 OrcaSlicer CLI Wrapper.
 
-OrcaSlicer wird als Headless-Prozess ausgeführt:
-  orca-slicer --slice 1 --load-settings overrides.json -o <output> <input>
+Korrekter Aufruf (ermittelt durch Recherche OrcaSlicer 2.x CLI):
 
-Parameter-Overrides werden als temporäre JSON-Datei übergeben (--load-settings).
-OrcaSlicer 2.x kennt kein --set; das ist PrusaSlicer-Syntax.
+  xvfb-run -a orca-slicer \
+    --load-settings "machine.json;process.json;overrides.json" \
+    --load-filaments "filament.json" \
+    --allow-newer-file \
+    --slice 1 \
+    --outputdir /tmp/out \
+    input.stl
 
-Profil-JSON-Dateien liegen unter profiles/<name>.json
-und können aus der Desktop-App exportiert werden.
+Wichtige Regeln:
+- compatible_printers in process/filament JSON muss EXAKT dem 'name'-Feld
+  in machine.json entsprechen (String-Vergleich, kein Fuzzy-Match)
+- --load-settings: Reihenfolge machine → process → overrides (letzte hat höchste Prio)
+- --allow-newer-file verhindert Versions-Mismatch-Fehler
+- OrcaSlicer schreibt result.json ins outputdir (return_code + error_string)
+- Ausgabedatei heißt automatisch plate_1.gcode (nicht konfigurierbar)
 """
 import asyncio
 import json
@@ -19,19 +28,22 @@ from pathlib import Path
 
 from models.job import Job, SliceParams
 from config import GCODES_DIR
+from services.profiles import get_machine_name
 
 ORCA_BIN = os.getenv("ORCA_SLICER_BIN", "orca-slicer")
 XVFB = "xvfb-run"
 
 
-def _build_overrides_json(params: SliceParams) -> str:
-    """Schreibt Parameter-Overrides in eine temporäre JSON-Datei und gibt den Pfad zurück."""
-    overrides = {
+def _build_overrides_json(params: SliceParams, machine_name: str) -> str:
+    """
+    Schreibt Parameter-Overrides in eine temporäre JSON-Datei.
+    compatible_printers muss exakt dem 'name' in machine.json entsprechen.
+    """
+    overrides: dict = {
         "type": "process",
         "from": "user",
-        "name": "overrides",
+        "name": "sofaslicer-overrides",
         "version": "2.2.0.0",
-        "compatible_printers_condition": "",
         "layer_height": str(params.layer_height),
         "sparse_infill_density": f"{params.infill_percent}%",
         "sparse_infill_pattern": params.infill_pattern,
@@ -41,6 +53,11 @@ def _build_overrides_json(params: SliceParams) -> str:
         "bed_temperature": [str(params.bed_temp)],
         "outer_wall_speed": str(params.speed_mm_s),
     }
+
+    if machine_name:
+        overrides["compatible_printers"] = [machine_name]
+    else:
+        overrides["compatible_printers_condition"] = ""
 
     if params.support and params.support_type:
         overrides["support_type"] = params.support_type
@@ -59,21 +76,24 @@ def _build_overrides_json(params: SliceParams) -> str:
 
 def _build_args(source: Path, out_dir: Path, params: SliceParams) -> tuple[list[str], str]:
     """Gibt (args, tmp_json_path) zurück. tmp_json_path muss nach dem Prozess gelöscht werden."""
+    machine_name = get_machine_name(params.machine_profile) if params.machine_profile else ""
+    tmp_path = _build_overrides_json(params, machine_name)
+
     args = [XVFB, "-a", ORCA_BIN]
 
-    # Maschinen-Profil + Overrides gemeinsam via --load-settings (Reihenfolge wichtig)
-    tmp_path = _build_overrides_json(params)
+    # --load-settings: machine → process → overrides (aufsteigende Priorität)
     settings = []
     if params.machine_profile:
         settings.append(params.machine_profile)
+    if params.process_profile:
+        settings.append(params.process_profile)
     settings.append(tmp_path)
     args += ["--load-settings", ";".join(settings)]
 
-    # Filament-Profil separat via --load-filaments
     if params.filament_profile:
         args += ["--load-filaments", params.filament_profile]
 
-    args += ["--slice", "0", "--outputdir", str(out_dir), str(source)]
+    args += ["--allow-newer-file", "--slice", "1", "--outputdir", str(out_dir), str(source)]
     return args, tmp_path
 
 
@@ -116,7 +136,6 @@ async def slice_model(job: Job) -> dict:
     GCODES_DIR.mkdir(parents=True, exist_ok=True)
     final_output = GCODES_DIR / f"{job.id}.gcode"
 
-    # OrcaSlicer benennt die Datei selbst → temporäres Ausgabeverzeichnis
     with tempfile.TemporaryDirectory(prefix="orca_out_") as out_dir:
         args, tmp_json = _build_args(source, Path(out_dir), job.params)
 
@@ -131,13 +150,26 @@ async def slice_model(job: Job) -> dict:
         finally:
             Path(tmp_json).unlink(missing_ok=True)
 
+        # result.json auswerten (OrcaSlicer schreibt immer eine)
+        result_json_path = Path(out_dir) / "result.json"
+        if result_json_path.exists():
+            try:
+                result_data = json.loads(result_json_path.read_text())
+                if result_data.get("return_code", 0) != 0:
+                    error_str = result_data.get("error_string") or log
+                    raise RuntimeError(f"OrcaSlicer Fehler (code {result_data['return_code']}): {error_str}")
+            except RuntimeError:
+                raise
+            except Exception:
+                pass  # result.json nicht parsebar → weiter mit returncode-Check
+
         if proc.returncode != 0:
             raise RuntimeError(f"OrcaSlicer Fehler (code {proc.returncode}):\n{log}")
 
-        # Erzeugte .gcode-Datei finden und umbenennen
+        # OrcaSlicer benennt die Ausgabe automatisch (plate_1.gcode o.ä.)
         gcode_files = list(Path(out_dir).glob("*.gcode"))
         if not gcode_files:
-            raise RuntimeError("OrcaSlicer hat keine G-Code-Datei erzeugt.")
+            raise RuntimeError(f"OrcaSlicer hat keine G-Code-Datei erzeugt.\nLog:\n{log}")
 
         gcode_files[0].rename(final_output)
 
