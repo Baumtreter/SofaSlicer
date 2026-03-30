@@ -15,20 +15,9 @@ class JobStatus(str, Enum):
 
 
 class SliceParams(BaseModel):
-    layer_height: float = 0.2
-    infill_percent: int = 15
-    infill_pattern: str = "gyroid"
-    perimeters: int = 3
-    support: bool = False
-    support_type: str | None = None     # "normal" | "tree" | "organic"
-    brim: bool = False
-    brim_width_mm: float = 8.0
-    nozzle_temp: int = 215
-    bed_temp: int = 60
-    speed_mm_s: int = 150
-    machine_profile: str = ""   # voller Pfad zur OrcaSlicer-Maschinen-JSON
-    process_profile: str = ""   # voller Pfad zur OrcaSlicer-Prozess-JSON
-    filament_profile: str = ""  # voller Pfad zur OrcaSlicer-Filament-JSON
+    printer_id: str = ""       # ID des eingerichteten Druckers (aus /setup/printers)
+    process_file: str = ""     # Dateiname aus /data/printers/{id}/process/
+    filament_file: str = ""    # Dateiname aus /data/printers/{id}/filament/
 
 
 class Job(BaseModel):

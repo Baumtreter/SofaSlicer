@@ -14,13 +14,65 @@ Self-hosted Slicing-Backend: STL-Dateien hochladen → OrcaSlicer CLI sliced sie
 
 ---
 
+## Aktueller Stand (2026-03-30, Session 2)
+
+### Was komplett funktioniert
+- Docker-Image baut + läuft (python:3.12-slim-bookworm, alle nötigen Libs)
+- OrcaSlicer AppImage headless via xvfb-run + AppRun-Symlink
+- Backend-API: Upload, Slice, G-Code-Download, Drucker-Verwaltung (Netzwerk)
+- **Neues Profil-System komplett implementiert (Session 2):**
+  - `GET /setup/printers/available` — Vendor-Liste vom OrcaSlicer GitHub-Repo
+  - `GET /setup/printers/available/{vendor}` — Machine-JSONs für einen Vendor
+  - `POST /setup/printers` — Drucker hinzufügen: Profile werden im Hintergrund heruntergeladen
+  - `GET /setup/printers` — Eingerichtete Drucker auflisten
+  - `GET /setup/printers/{id}/profiles` — Verfügbare process/filament-Dateien
+  - `DELETE /setup/printers/{id}` — Drucker + Profile entfernen
+  - Slice-Router nutzt jetzt Profile aus `/data/printers/` statt dynamisch generierter JSONs
+
+### Was noch fehlt (nächste Session)
+1. **Custom-Profil-Upload** (`POST /setup/printers/custom`) — für K1 Max, U1
+2. **Frontend-Setup-Seite** — UI zum Drucker einrichten (Vendor → Maschine → Download)
+3. **Frontend Slice-Flow** — angepasst an neues SliceParams-Modell (printer_id, process_file, filament_file)
+4. **Testen auf dem NAS** — ob das neue System wirklich funktioniert
+
+---
+
+## Architektur (Profil-System)
+
+### Datenfluss Setup
+1. `GET /setup/printers/available` → GitHub API → Vendor-Liste
+2. `GET /setup/printers/available/{vendor}` → GitHub API → Machine-JSONs
+3. `POST /setup/printers {display_name, vendor, machine_file}` → Download startet im Hintergrund
+4. Drucker ist bereit wenn `ready: true` (per Polling prüfen)
+
+### Datenfluss Slicing
+1. STL hochladen → `POST /files/` → Filename zurück
+2. `GET /setup/printers/{id}/profiles` → verfügbare process/filament Dateien
+3. `POST /slice/ {filename, params: {printer_id, process_file, filament_file}}`
+4. `GET /slice/{job_id}` → Status + G-Code
+
+### Profil-Storage
+```
+/data/printers/{printer_id}/
+  machine/    ← genau eine JSON (die beim Setup gewählte)
+  process/    ← alle process JSONs des Vendors
+  filament/   ← alle filament JSONs des Vendors (Root-Ebene)
+```
+
+### Config
+`/data/config.json` enthält zwei Drucker-Listen:
+- `printers` — Netzwerk-Drucker (IP, Protokoll für G-Code-Übertragung)
+- `setup_printers` — OrcaSlicer-Profil-Drucker (vendor, machine_file, ready-Flag)
+
+---
+
 ## OrcaSlicer 2.x CLI — vollständig dokumentiert
 
 ### Korrekter Befehl
 
 ```bash
 xvfb-run -a orca-slicer \
-  --load-settings "machine.json;process.json;overrides.json" \
+  --load-settings "machine.json;process.json" \
   --load-filaments "filament.json" \
   --allow-newer-file \
   --slice 1 \
@@ -32,40 +84,47 @@ xvfb-run -a orca-slicer \
 
 - **Kein `--set`** — existiert nicht in OrcaSlicer (PrusaSlicer-Syntax)
 - **Kein `-o`** — Ausgabe geht nach `--outputdir`, Datei heißt automatisch `plate_1.gcode`
-- **`compatible_printers`** in process/filament JSON muss **exakt** dem `"name"`-Feld in machine.json entsprechen (String-Vergleich, kein Fuzzy-Match) → Fehler -17 sonst
-- **`--load-settings`** Reihenfolge: `machine → process → overrides` (letzte hat höchste Priorität)
+- **`compatible_printers`** in process/filament JSON muss **exakt** dem `"name"`-Feld in machine.json entsprechen → Fehler -17 sonst. Offizielle Profile haben das bereits korrekt gesetzt.
+- **`--load-settings`** Reihenfolge: `machine → process` (letzte hat höchste Priorität)
 - **`--allow-newer-file`** verhindert Versions-Mismatch-Fehler
-- **`--slice 1`** = Platte 1 (für STL-Dateien immer korrekt); `--slice 0` = alle Platten
-- OrcaSlicer schreibt `result.json` ins outputdir: `{"return_code": 0}` bei Erfolg, `{"return_code": -17, "error_string": "..."}` bei Fehler
+- **`--slice 1`** = Platte 1 (für STL-Dateien immer korrekt)
+- OrcaSlicer schreibt `result.json` ins outputdir: `{"return_code": 0}` bei Erfolg
 - Slice-Fehler landen **nicht** in Container-Logs → nur in `job.error` via `GET /slice/<job_id>`
 
 ### Fehler-Codes
 
 | Code | Bedeutung | Fix |
 |---|---|---|
+| -5  | Ungültiges Profil-JSON-Format | Profile aus offiziellem Repo verwenden, nicht selbst generieren |
 | 254 | Ungültige CLI-Option | Option prüfen (z.B. kein `--set`, kein `-o`) |
 | 251 | Ungültiges Settings-JSON-Format | `type`, `from`, `name`, `version` Felder prüfen |
-| 239 | Process nicht kompatibel mit Drucker | `compatible_printers` muss exakt machine `name` enthalten |
+| -17 / 239 | Process nicht kompatibel mit Drucker | `compatible_printers` muss exakt machine `name` enthalten |
 
-### Profil-System
+---
 
-Profile liegen in `/opt/orca-slicer/resources/profiles/{Vendor}/machine|process|filament/*.json`
+## GitHub-Profil-Repo Struktur
 
-Profil-JSON benötigt Pflichtfelder:
-```json
-{
-  "type": "process",       // oder "machine" / "filament"
-  "from": "user",
-  "name": "mein-profil",
-  "version": "2.2.0.0",
-  "compatible_printers": ["Exakter Maschinenname aus machine.json"]
-}
+```
+https://github.com/SoftFever/OrcaSlicer/tree/main/resources/profiles/
+  {Vendor}/
+    machine/   ← z.B. "Bambu Lab P1S.json"
+    process/   ← z.B. "0.20mm Standard @BBL P1S.json"
+    filament/  ← z.B. "Bambu PLA @BBL P1S.json"
 ```
 
-API-Endpunkte für Profile:
-- `GET /profiles/machines` — alle Maschinen-Profile
-- `GET /profiles/processes` — alle Prozess-Profile
-- `GET /profiles/filaments` — alle Filament-Profile
+Wichtige Vendor-Namen:
+- Bambu Lab → `BBL`
+- Creality → `Creality`
+- Snapmaker → `Snapmaker`
+
+---
+
+## Flös Drucker
+- Bambu Lab P1S — Vendor: `BBL`, machine: `Bambu Lab P1S.json`
+- Bambu Lab A1 — Vendor: `BBL`, machine: `Bambu Lab A1.json`
+- Creality K1 Max — Custom-Profil (noch kein Upload-Endpoint!)
+- Snapmaker U1 — Vendor: `Snapmaker`, alternativ Custom-Profil
+- Creality Ender-3 — Vendor: `Creality`
 
 ---
 
@@ -73,18 +132,17 @@ API-Endpunkte für Profile:
 
 Base: `python:3.12-slim-bookworm` (Bookworm nötig wegen `libwebkit2gtk-4.0-37`)
 
-Benötigte Pakete (ermittelt via `ldd ... | grep "not found"`):
+Benötigte Pakete:
 - `libgtk-3-0`, `libegl1`, `libegl-mesa0`, `libgl1`, `libglu1-mesa`
 - `libwebkit2gtk-4.0-37` (zieht `libjavascriptcoregtk-4.0-18` als Dep mit)
 - `libgstreamer1.0-0`, `libgstreamer-plugins-base1.0-0`
 - `libcurl4`, `libdbus-1-3`
 - `xvfb`, `xauth`, `wget`, `ca-certificates`
 
-Symlink muss auf `AppRun` zeigen (nicht auf `bin/orca-slicer`):
+Symlink muss auf `AppRun` zeigen:
 ```dockerfile
 ln -s /opt/orca-slicer/AppRun /usr/local/bin/orca-slicer
 ```
-AppRun setzt LD_LIBRARY_PATH auf gebündelte Libs — direkter Binary-Aufruf umgeht das.
 
 ---
 
@@ -111,24 +169,16 @@ SSH braucht `sudo` für docker-Befehle (User nicht in docker-Gruppe).
 
 ---
 
-## Gelöste Probleme (chronologisch)
+## Nächster Schritt (nächste Session)
 
-1. Volume-Pfad `volume1` → `volume2`
-2. data/uploads + data/gcodes fehlend → ins Repo aufgenommen
-3. config.json fehlt beim Start → auto-create
-4. bind-mount → named volume (Portainer-Kompatibilität)
-5. UPLOADS_DIR Pfad falsch im slice router
-6. Symlink auf `bin/orca-slicer` → auf `AppRun` geändert
-7. `libwebkit2gtk-4.0-37` fehlte (via ldd ermittelt)
-8. Base-Image auf `bookworm` gepinnt (`libwebkit2gtk-4.0-37` nicht in Trixie)
-9. `--set` existiert nicht → temporäre JSON + `--load-settings`
-10. `-o` existiert nicht → `--outputdir` + automatischer Dateiname
-11. `compatible_printers` muss exakt machine `name` matchen → Fehler -17
+**Priorität 1 — Testen:**
+- NAS deployen und Setup-Flow durchspielen (Drucker hinzufügen → Profile herunterladen → Slice)
+- Wenn Slicing funktioniert: Erfolg!
 
-## Nächster Schritt
+**Priorität 2 — Custom-Profil-Upload:**
+- `POST /setup/printers/custom` — ZIP oder einzelne JSONs hochladen
+- Für K1 Max und evtl. U1
 
-Pull and redeploy in Portainer, dann Slice mit Maschinen- + Prozess- + Filament-Profil testen.
-Falls Generic-Profile in Dropdowns fehlen: Profilstruktur im Container prüfen:
-```bash
-sudo docker exec <container> find /opt/orca-slicer/resources/profiles -maxdepth 3 -name "*.json" | head -40
-```
+**Priorität 3 — Frontend:**
+- Setup-Seite: Vendor-Dropdown → Machine-Dropdown → "Hinzufügen" Button → Fortschrittsanzeige
+- Slice-Flow anpassen: Drucker-Dropdown (aus /setup/printers) → Process → Filament → Slice

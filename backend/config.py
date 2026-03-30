@@ -7,15 +7,17 @@ CONFIG_PATH  = Path(os.getenv("CONFIG_FILE",  "data/config.json"))
 UPLOADS_DIR  = Path(os.getenv("UPLOADS_DIR",  "data/uploads"))
 GCODES_DIR   = Path(os.getenv("GCODES_DIR",   "data/gcodes"))
 PROFILES_DIR = Path(os.getenv("PROFILES_DIR", "data/profiles"))
+PRINTERS_DIR = Path(os.getenv("PRINTERS_DIR", "data/printers"))  # heruntergeladene Profile
 
 _defaults: dict = {
     "printers": [],
+    "setup_printers": [],
     "orca_slicer_bin": os.getenv("ORCA_SLICER_BIN", "orca-slicer"),
 }
 
 
 def _ensure_dirs() -> None:
-    for d in [CONFIG_PATH.parent, UPLOADS_DIR, GCODES_DIR, PROFILES_DIR]:
+    for d in [CONFIG_PATH.parent, UPLOADS_DIR, GCODES_DIR, PROFILES_DIR, PRINTERS_DIR]:
         d.mkdir(parents=True, exist_ok=True)
 
 
@@ -67,5 +69,37 @@ def delete_printer(printer_id: str) -> bool:
     if len(new) == len(printers):
         return False
     cfg["printers"] = new
+    _save(cfg)
+    return True
+
+
+# ── Setup-Drucker (OrcaSlicer-Profile) ──────────────────────────────────────
+
+def get_setup_printers() -> list[dict]:
+    return _load().get("setup_printers", [])
+
+
+def get_setup_printer(printer_id: str) -> dict | None:
+    for p in get_setup_printers():
+        if p["id"] == printer_id:
+            return p
+    return None
+
+
+def save_setup_printer(printer: dict) -> None:
+    cfg = _load()
+    printers = [p for p in cfg.get("setup_printers", []) if p["id"] != printer["id"]]
+    printers.append(printer)
+    cfg["setup_printers"] = printers
+    _save(cfg)
+
+
+def delete_setup_printer(printer_id: str) -> bool:
+    cfg = _load()
+    printers = cfg.get("setup_printers", [])
+    new = [p for p in printers if p["id"] != printer_id]
+    if len(new) == len(printers):
+        return False
+    cfg["setup_printers"] = new
     _save(cfg)
     return True

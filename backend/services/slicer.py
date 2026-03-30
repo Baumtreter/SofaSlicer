@@ -1,23 +1,24 @@
 """
 OrcaSlicer CLI Wrapper.
 
-Korrekter Aufruf (ermittelt durch Recherche OrcaSlicer 2.x CLI):
+Korrekter Aufruf (OrcaSlicer 2.x):
 
   xvfb-run -a orca-slicer \
-    --load-settings "machine.json;process.json;overrides.json" \
+    --load-settings "machine.json;process.json" \
     --load-filaments "filament.json" \
     --allow-newer-file \
     --slice 1 \
     --outputdir /tmp/out \
     input.stl
 
+Profile kommen aus /data/printers/{printer_id}/ (einmalig beim Setup heruntergeladen).
+Kein dynamisches Generieren mehr -> keine -5/-17 Fehler mehr.
+
 Wichtige Regeln:
-- compatible_printers in process/filament JSON muss EXAKT dem 'name'-Feld
-  in machine.json entsprechen (String-Vergleich, kein Fuzzy-Match)
-- --load-settings: Reihenfolge machine → process → overrides (letzte hat höchste Prio)
 - --allow-newer-file verhindert Versions-Mismatch-Fehler
 - OrcaSlicer schreibt result.json ins outputdir (return_code + error_string)
-- Ausgabedatei heißt automatisch plate_1.gcode (nicht konfigurierbar)
+- Ausgabedatei heisst automatisch plate_1.gcode
+- Slice-Fehler landen NICHT in Container-Logs -> nur in result.json und job.error
 """
 import asyncio
 import json
@@ -27,74 +28,60 @@ import tempfile
 from pathlib import Path
 
 from models.job import Job, SliceParams
-from config import GCODES_DIR
-from services.profiles import get_machine_name
+from config import GCODES_DIR, PRINTERS_DIR
+import config
 
 ORCA_BIN = os.getenv("ORCA_SLICER_BIN", "orca-slicer")
 XVFB = "xvfb-run"
 
 
-def _build_overrides_json(params: SliceParams, machine_name: str) -> str:
+def _resolve_profiles(params: SliceParams) -> tuple[Path, Path, Path]:
     """
-    Schreibt Parameter-Overrides in eine temporäre JSON-Datei.
-    compatible_printers muss exakt dem 'name' in machine.json entsprechen.
+    Gibt (machine_path, process_path, filament_path) zurueck.
+    Wirft ValueError wenn Drucker oder Profile nicht gefunden.
     """
-    overrides: dict = {
-        "type": "process",
-        "from": "user",
-        "name": "sofaslicer-overrides",
-        "version": "2.2.0.0",
-        "layer_height": str(params.layer_height),
-        "sparse_infill_density": f"{params.infill_percent}%",
-        "sparse_infill_pattern": params.infill_pattern,
-        "wall_loops": str(params.perimeters),
-        "enable_support": "1" if params.support else "0",
-        "nozzle_temperature": [str(params.nozzle_temp)],
-        "bed_temperature": [str(params.bed_temp)],
-        "outer_wall_speed": str(params.speed_mm_s),
-    }
+    if not params.printer_id:
+        raise ValueError("Kein Drucker ausgewaehlt (printer_id fehlt)")
 
-    if machine_name:
-        overrides["compatible_printers"] = [machine_name]
-    else:
-        overrides["compatible_printers_condition"] = ""
+    printer = config.get_setup_printer(params.printer_id)
+    if not printer:
+        raise ValueError(f"Drucker '{params.printer_id}' nicht gefunden. Bitte zuerst einrichten.")
+    if not printer.get("ready"):
+        raise ValueError(f"Drucker '{printer['display_name']}' ist noch nicht bereit (Profile werden noch heruntergeladen)")
 
-    if params.support and params.support_type:
-        overrides["support_type"] = params.support_type
+    printer_dir = PRINTERS_DIR / params.printer_id
 
-    if params.brim:
-        overrides["brim_type"] = "outer_only"
-        overrides["brim_width"] = str(params.brim_width_mm)
+    # Machine JSON (immer genau eine pro Drucker)
+    machine_dir = printer_dir / "machine"
+    machine_files = list(machine_dir.glob("*.json"))
+    if not machine_files:
+        raise ValueError(f"Keine Machine-JSON gefunden in {machine_dir}")
+    machine_path = machine_files[0]
 
-    tmp = tempfile.NamedTemporaryFile(
-        mode="w", suffix=".json", delete=False, prefix="orca_overrides_"
-    )
-    json.dump(overrides, tmp)
-    tmp.close()
-    return tmp.name
+    # Process JSON
+    if not params.process_file:
+        raise ValueError("Kein Druckprofil ausgewaehlt (process_file fehlt)")
+    process_path = printer_dir / "process" / params.process_file
+    if not process_path.exists():
+        raise ValueError(f"Druckprofil nicht gefunden: {params.process_file}")
+
+    # Filament JSON
+    if not params.filament_file:
+        raise ValueError("Kein Filament ausgewaehlt (filament_file fehlt)")
+    filament_path = printer_dir / "filament" / params.filament_file
+    if not filament_path.exists():
+        raise ValueError(f"Filament-Profil nicht gefunden: {params.filament_file}")
+
+    return machine_path, process_path, filament_path
 
 
-def _build_args(source: Path, out_dir: Path, params: SliceParams) -> tuple[list[str], str]:
-    """Gibt (args, tmp_json_path) zurück. tmp_json_path muss nach dem Prozess gelöscht werden."""
-    machine_name = get_machine_name(params.machine_profile) if params.machine_profile else ""
-    tmp_path = _build_overrides_json(params, machine_name)
-
+def _build_args(source: Path, out_dir: Path, machine: Path, process: Path, filament: Path) -> list[str]:
+    """Baut die OrcaSlicer CLI-Argumente zusammen."""
     args = [XVFB, "-a", ORCA_BIN]
-
-    # --load-settings: machine → process → overrides (aufsteigende Priorität)
-    settings = []
-    if params.machine_profile:
-        settings.append(params.machine_profile)
-    if params.process_profile:
-        settings.append(params.process_profile)
-    settings.append(tmp_path)
-    args += ["--load-settings", ";".join(settings)]
-
-    if params.filament_profile:
-        args += ["--load-filaments", params.filament_profile]
-
+    args += ["--load-settings", f"{machine};{process}"]
+    args += ["--load-filaments", str(filament)]
     args += ["--allow-newer-file", "--slice", "1", "--outputdir", str(out_dir), str(source)]
-    return args, tmp_path
+    return args
 
 
 def _parse_stats(output: str) -> dict:
@@ -126,29 +113,28 @@ def _parse_stats(output: str) -> dict:
 
 async def slice_model(job: Job) -> dict:
     """
-    Führt OrcaSlicer asynchron aus.
-    Gibt Dict mit gcode_path + stats zurück oder wirft Exception.
+    Fuehrt OrcaSlicer asynchron aus.
+    Gibt Dict mit gcode_path + stats zurueck oder wirft Exception.
     """
     source = Path(job.source_path)
     if not source.exists():
         raise FileNotFoundError(f"Quelldatei nicht gefunden: {source}")
 
+    machine_path, process_path, filament_path = _resolve_profiles(job.params)
+
     GCODES_DIR.mkdir(parents=True, exist_ok=True)
     final_output = GCODES_DIR / f"{job.id}.gcode"
 
     with tempfile.TemporaryDirectory(prefix="orca_out_") as out_dir:
-        args, tmp_json = _build_args(source, Path(out_dir), job.params)
+        args = _build_args(source, Path(out_dir), machine_path, process_path, filament_path)
 
-        try:
-            proc = await asyncio.create_subprocess_exec(
-                *args,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.STDOUT,
-            )
-            stdout, _ = await proc.communicate()
-            log = stdout.decode("utf-8", errors="replace")
-        finally:
-            Path(tmp_json).unlink(missing_ok=True)
+        proc = await asyncio.create_subprocess_exec(
+            *args,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+        )
+        stdout, _ = await proc.communicate()
+        log = stdout.decode("utf-8", errors="replace")
 
         # result.json auswerten (OrcaSlicer schreibt immer eine)
         result_json_path = Path(out_dir) / "result.json"
@@ -161,12 +147,11 @@ async def slice_model(job: Job) -> dict:
             except RuntimeError:
                 raise
             except Exception:
-                pass  # result.json nicht parsebar → weiter mit returncode-Check
+                pass  # result.json nicht parsebar -> weiter mit returncode-Check
 
         if proc.returncode != 0:
             raise RuntimeError(f"OrcaSlicer Fehler (code {proc.returncode}):\n{log}")
 
-        # OrcaSlicer benennt die Ausgabe automatisch (plate_1.gcode o.ä.)
         gcode_files = list(Path(out_dir).glob("*.gcode"))
         if not gcode_files:
             raise RuntimeError(f"OrcaSlicer hat keine G-Code-Datei erzeugt.\nLog:\n{log}")
