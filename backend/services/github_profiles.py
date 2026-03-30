@@ -26,7 +26,7 @@ async def list_vendors() -> list[dict]:
     Gibt alle Vendor-Ordner aus dem OrcaSlicer-Profil-Repo zurück.
     Jedes Dict: {"name": "BBL", "display_name": "BBL"}
     """
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         r = await client.get(
             f"{GITHUB_API}/repos/{REPO}/contents/{PROFILES_PATH}",
             headers=API_HEADERS,
@@ -45,7 +45,7 @@ async def list_machines(vendor: str) -> list[str]:
     Gibt alle Machine-JSON-Dateinamen für einen Vendor zurück.
     z.B. ["Bambu Lab P1S.json", "Bambu Lab A1.json", ...]
     """
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         r = await client.get(
             f"{GITHUB_API}/repos/{REPO}/contents/{PROFILES_PATH}/{vendor}/machine",
             headers=API_HEADERS,
@@ -81,7 +81,7 @@ async def download_printer_profiles(
     raw_vendor = f"{RAW_BASE}/{PROFILES_PATH}/{vendor}"
     api_vendor = f"{GITHUB_API}/repos/{REPO}/contents/{PROFILES_PATH}/{vendor}"
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         # 1. Machine JSON
         machine_dest = dest_dir / "machine" / machine_file
         await _download_one(client, f"{raw_vendor}/machine/{machine_file}", machine_dest)
